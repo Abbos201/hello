@@ -8,40 +8,37 @@ export const config = {
 };
 
 export default async function handler(req, res) {
-  if (req.method !== "POST")
-    return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Only POST requests allowed" });
+  }
 
-  const form = formidable();
+  const form = formidable({});
   form.parse(req, async (err, fields, files) => {
-    if (err) return res.status(500).json({ error: err.message });
+    if (err) {
+      console.error("Form parse error:", err);
+      return res.status(500).json({ error: "Form parse error" });
+    }
+
+    const file = files.photo?.[0];
+    if (!file) {
+      return res.status(400).json({ error: "No photo found" });
+    }
 
     try {
-      const file = files.photo?.[0];
-      if (!file) return res.status(400).json({ error: "Rasm topilmadi" });
-
-      const data = fs.readFileSync(file.filepath);
-
-      const botToken = process.env.BOT_TOKEN;
-      const chatId = process.env.CHAT_ID;
-
-      const url = `https://api.telegram.org/bot${botToken}/sendPhoto`;
-
-      // ✅ FormData yaratamiz va to‘g‘ri append qilamiz
       const formData = new FormData();
-      formData.append("chat_id", chatId);
-      formData.append("photo", data, { filename: "photo.jpg" });
+      formData.append("chat_id", process.env.CHAT_ID);
+      formData.append("photo", fs.createReadStream(file.filepath));
 
-      // ✅ `node-fetch` bilan yuboramiz
-      const response = await fetch(url, {
-        method: "POST",
-        body: formData,
-      });
+      const telegramRes = await fetch(
+        `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendPhoto`,
+        { method: "POST", body: formData }
+      );
 
-      const json = await response.json();
-      res.status(200).json(json);
+      const result = await telegramRes.json();
+      res.status(200).json(result);
     } catch (error) {
-      console.error("Yuborish xatosi:", error);
-      res.status(500).json({ error: error.message });
+      console.error("Send error:", error);
+      res.status(500).json({ error: "Failed to send photo" });
     }
   });
 }

