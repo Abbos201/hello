@@ -1,0 +1,6 @@
+{
+  "builds": [
+    { "src": "pages/**/*.js", "use": "@vercel/node" },
+    { "src": "pages/index.html", "use": "@vercel/static" }
+  ]
+}
