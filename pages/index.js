@@ -6,17 +6,16 @@ export default function Home() {
   const [status, setStatus] = useState("Kamera ishga tushmoqda...");
 
   useEffect(() => {
-    async function startCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        videoRef.current.srcObject = stream;
-        await new Promise((resolve) => (videoRef.current.onloadeddata = resolve));
-        setStatus("📷 Kamera ishga tushdi");
-        setInterval(captureFrame, 5000);
-      } catch (e) {
-        setStatus("❌ Kamera yoq: " + e.message);
-      }
+  async function startCamera() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const video = document.querySelector("video");
+      video.srcObject = stream;
+    } catch (err) {
+      console.error("Kamera ishga tushmadi:", err);
+      alert("Kamera ruxsati berilmagan yoki xato yuz berdi.");
     }
+  }
 
     async function captureFrame() {
       const video = videoRef.current;
