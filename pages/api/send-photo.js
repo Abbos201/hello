@@ -17,8 +17,8 @@ export default async function handler(req, res) {
     const file = files.photo[0];
     const data = fs.readFileSync(file.filepath);
 
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
+    const botToken = process.env.BOT_TOKEN;
+    const chatId = process.env.CHAT_ID;
 
     const url = `https://api.telegram.org/bot${botToken}/sendPhoto`;
 
